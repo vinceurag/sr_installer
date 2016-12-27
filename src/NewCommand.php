@@ -5,12 +5,12 @@ namespace SimplyREST\Installer\Console;
 use ZipArchive;
 use RuntimeException;
 use GuzzleHttp\Client;
-use Symfony\Component\Process\Process;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Helper\ProgressBar;
 
 class NewCommand extends Command
 {
@@ -40,39 +40,28 @@ class NewCommand extends Command
             throw new RuntimeException('The Zip PHP extension is not installed. Please install it and try again.');
         }
 
-        $this->verifyApplicationDoesntExist(
+        $this->isExisting(
             $directory = ($input->getArgument('name')) ? getcwd().'/'.$input->getArgument('name') : getcwd()
         );
 
-        $output->writeln('<info>Crafting application...</info>');
+        $output->writeln('<info>Building app skeleton...</info>');
+        $progress = new ProgressBar($output, 3);
+        $progress->setProgressCharacter("\xF0\x9F\x8D\xBA");
+        $progress->setBarCharacter('<fg=magenta>=</>');
 
-        $this->download($zipFile = $this->makeFilename())
-             ->extract($zipFile, $directory)
-             ->cleanUp($zipFile);
-
-        // $composer = $this->findComposer();
-        //
-        // $commands = [
-        //     $composer.' install --no-scripts'
-        // ];
-
-        // if ($input->getOption('no-ansi')) {
-        //     $commands = array_map(function ($value) {
-        //         return $value.' --no-ansi';
-        //     }, $commands);
-        // }
-
-        // $process = new Process(implode(' && ', $commands), $directory, null, null, null);
-        //
-        // if ('\\' !== DIRECTORY_SEPARATOR && file_exists('/dev/tty') && is_readable('/dev/tty')) {
-        //     $process->setTty(true);
-        // }
-        //
-        // $process->run(function ($type, $line) use ($output) {
-        //     $output->write($line);
-        // });
-
-        $output->writeln('<comment>Application ready! Build something amazing.</comment>');
+        $this->download($zipFile = $this->makeFilename());
+        usleep(300000);
+        $progress->advance();
+        $this->extract($zipFile, $directory);
+        usleep(300000);
+        $progress->advance();
+        $this->cleanUp($zipFile);
+        usleep(300000);
+        $progress->advance();
+        usleep(300000);
+        $progress->finish();
+        $output->writeln(' ');
+        $output->writeln('<comment>Application was built! Start making your RESTful API now.</comment>');
     }
 
     /**
@@ -81,7 +70,7 @@ class NewCommand extends Command
      * @param  string  $directory
      * @return void
      */
-    protected function verifyApplicationDoesntExist($directory)
+    protected function isExisting($directory)
     {
         if ((is_dir($directory) || is_file($directory)) && $directory != getcwd()) {
             throw new RuntimeException('Application already exists!');
@@ -149,18 +138,4 @@ class NewCommand extends Command
         return $this;
     }
 
-
-    /**
-     * Get the composer command for the environment.
-     *
-     * @return string
-     */
-    protected function findComposer()
-    {
-        if (file_exists(getcwd().'/composer.phar')) {
-            return '"'.PHP_BINARY.'" composer.phar';
-        }
-
-        return 'composer';
-    }
 }
